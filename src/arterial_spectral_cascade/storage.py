@@ -73,13 +73,18 @@ def save_case_metadata(prep: PreparedCase, paths: ProjectPaths) -> Path:
 
 
 def save_checkpoint(prep: PreparedCase, paths: ProjectPaths, step: int, ahat: np.ndarray, history: Dict[str,List[float]], peak: Dict[str,Any]) -> Path:
+    if not np.all(np.isfinite(ahat)):
+        raise ValueError(f"Refusing to checkpoint non-finite spectral state for {prep.case_id} at step {step}.")
+    peak_ahat=np.asarray(peak.get("ahat",ahat))
+    if not np.all(np.isfinite(peak_ahat)):
+        raise ValueError(f"Refusing to checkpoint non-finite peak state for {prep.case_id} at step {step}.")
     cdir=paths.checkpoints/prep.case_id; cdir.mkdir(parents=True,exist_ok=True)
     path=cdir/"latest.npz"
     integrity=stable_hash({"case_id":prep.case_id,"spec":_jsonable(prep.spec),"b":array_sha256(prep.b),"g":array_sha256(prep.g),"k":array_sha256(prep.grid.k),"mask":array_sha256(prep.grid.mask),"ic":array_sha256(initial_condition(prep.spec,prep.grid))},32)
     payload={"step":np.array(step,dtype=np.int64),"ahat":ahat,
              "case_metadata_hash":np.array(stable_hash({"case_id":prep.case_id,"spec":_jsonable(prep.spec)})),"integrity_hash":np.array(integrity),
              "peak_R":np.array(float(peak.get("R",-np.inf))),"peak_step":np.array(int(peak.get("step",0)),dtype=np.int64),
-             "peak_ahat":np.asarray(peak.get("ahat",ahat))}
+             "peak_ahat":peak_ahat}
     for k,v in history.items(): payload[f"hist_{k}"]=np.asarray(v)
     atomic_save_npz(path,**payload); return path
 
@@ -94,24 +99,49 @@ def load_checkpoint(prep: PreparedCase, paths: ProjectPaths) -> Optional[Dict[st
         expected_integrity=stable_hash({"case_id":prep.case_id,"spec":_jsonable(prep.spec),"b":array_sha256(prep.b),"g":array_sha256(prep.g),"k":array_sha256(prep.grid.k),"mask":array_sha256(prep.grid.mask),"ic":array_sha256(initial_condition(prep.spec,prep.grid))},32)
         if "integrity_hash" not in z or str(z["integrity_hash"].item())!=expected_integrity:
             raise RuntimeError(f"Checkpoint coefficient/grid/initial-condition integrity mismatch for {prep.case_id}.")
+        ahat=z["ahat"].copy(); peak_ahat=z["peak_ahat"].copy()
+        if not np.all(np.isfinite(ahat)) or not np.all(np.isfinite(peak_ahat)):
+            raise RuntimeError(f"Checkpoint contains a non-finite spectral state for {prep.case_id}; remove the checkpoint and rerun the case.")
         hist={k[5:]:z[k].tolist() for k in z.keys() if k.startswith("hist_")}
-        return {"step":int(z["step"]),"ahat":z["ahat"].copy(),"history":hist,
-                "peak":{"R":float(z["peak_R"]),"step":int(z["peak_step"]),"ahat":z["peak_ahat"].copy()}}
+        return {"step":int(z["step"]),"ahat":ahat,"history":hist,
+                "peak":{"R":float(z["peak_R"]),"step":int(z["peak_step"]),"ahat":peak_ahat}}
+
+
+def _finite_float_or_none(value: Any) -> Optional[float]:
+    try:
+        v=float(value)
+    except (TypeError,ValueError):
+        return None
+    return v if np.isfinite(v) else None
 
 
 def _runtime_state_check(ahat: np.ndarray, prep: PreparedCase) -> Dict[str,Any]:
     finite=bool(np.all(np.isfinite(ahat)))
+    if not finite:
+        return {"finite":False,"relative_imaginary":None,"forbidden_mode_fraction":None,"pass":False}
     a=np.fft.ifft(ahat)
-    real_ratio=float(np.linalg.norm(a.imag)/max(np.linalg.norm(a.real),1e-30))
-    forbidden=float(np.linalg.norm(ahat[~prep.grid.mask])/max(np.linalg.norm(ahat),1e-30))
-    return {"finite":finite,"relative_imaginary":real_ratio,"forbidden_mode_fraction":forbidden,
-            "pass":finite and real_ratio<1e-11 and forbidden<1e-13}
+    real_den=max(float(np.linalg.norm(a.real)),1e-30)
+    ah_den=max(float(np.linalg.norm(ahat)),1e-30)
+    real_ratio=_finite_float_or_none(np.linalg.norm(a.imag)/real_den)
+    forbidden=_finite_float_or_none(np.linalg.norm(ahat[~prep.grid.mask])/ah_den)
+    passed=(real_ratio is not None and forbidden is not None and real_ratio<1e-11 and forbidden<1e-13)
+    return {"finite":True,"relative_imaginary":real_ratio,"forbidden_mode_fraction":forbidden,"pass":bool(passed)}
 
 
 def _record(prep: PreparedCase, ahat: np.ndarray, step: int) -> Dict[str,float]:
     rhs=full_rhs_hat(ahat,prep)
     bal=integrals_and_balance(ahat,prep,rhs); sp=spectral_broadening(ahat,prep)
     return {"step":int(step),"s":float(step*prep.spec.dt),**bal,**sp}
+
+
+def _record_is_finite(rec: Dict[str,Any]) -> bool:
+    for value in rec.values():
+        if isinstance(value,(int,np.integer)): continue
+        try:
+            if not np.isfinite(float(value)): return False
+        except (TypeError,ValueError):
+            return False
+    return True
 
 
 def _history_append(history: Dict[str,List[float]], rec: Dict[str,float]) -> None:
@@ -138,7 +168,9 @@ def run_case(prep: PreparedCase, paths: Optional[ProjectPaths]=None, resume: boo
     if cp:
         start=cp["step"]; ah=cp["ahat"]; history=cp["history"]; peak=cp["peak"]
     else:
-        start=0; ah=project_hat(np.fft.fft(initial_condition(spec,prep.grid)),prep.grid); history={}; rec=_record(prep,ah,0); _history_append(history,rec); peak={"R":rec["R"],"step":0,"ahat":ah.copy()}
+        start=0; ah=project_hat(np.fft.fft(initial_condition(spec,prep.grid)),prep.grid); history={}; rec=_record(prep,ah,0)
+        if not _record_is_finite(rec): raise RuntimeError(f"Initial diagnostic record is non-finite for {prep.case_id}.")
+        _history_append(history,rec); peak={"R":rec["R"],"step":0,"ahat":ah.copy()}
     initial_ahat=project_hat(np.fft.fft(initial_condition(spec,prep.grid)),prep.grid)
     etd=etd_coefficients(prep)
     iterator=range(start+1,steps+1)
@@ -147,34 +179,73 @@ def run_case(prep: PreparedCase, paths: Optional[ProjectPaths]=None, resume: boo
             from tqdm.auto import tqdm
             iterator=tqdm(iterator,desc=prep.case_id,leave=False)
         except Exception: pass
+
+    failure=None
     for step in iterator:
         ah=etdrk4_step(ah,prep,etd,include_nonlinearity,include_heterogeneity)
+        if not np.all(np.isfinite(ah)):
+            failure={"reason":"NONFINITE_SPECTRAL_STATE","step":int(step),"s":float(step*spec.dt)}
+            break
         if step%spec.output_every_steps==0 or step==steps:
-            rec=_record(prep,ah,step); _history_append(history,rec)
+            state_now=_runtime_state_check(ah,prep)
+            if not state_now["pass"]:
+                failure={"reason":"RUNTIME_STATE_CHECK_FAILED","step":int(step),"s":float(step*spec.dt),"state_check":state_now}
+                break
+            rec=_record(prep,ah,step)
+            if not _record_is_finite(rec):
+                failure={"reason":"NONFINITE_DIAGNOSTIC","step":int(step),"s":float(step*spec.dt)}
+                break
+            _history_append(history,rec)
             if rec["R"]>peak["R"]: peak={"R":rec["R"],"step":step,"ahat":ah.copy()}
         if paths is not None and (step%spec.checkpoint_every_steps==0 or step==steps):
             save_checkpoint(prep,paths,step,ah,history,peak)
-    hist=finalize_history(history); statecheck=_runtime_state_check(ah,prep)
-    imax=int(np.argmax(hist["R"])); summary={
-        "case_id":prep.case_id,"parent_case_id":prep.parent_case_id,"completed":True,"runtime_valid":bool(statecheck["pass"]),
-        "R_max":float(hist["R"][imax]),"s_R_max":float(hist["s"][imax]),"I2_final":float(hist["I2"][-1]),
-        "G_bal_max":float(np.max(hist["G_bal"])),"eta_tail_max":float(np.max(hist["eta_tail"])),
-        "max_abs_RI1_inst":float(np.max(np.abs(hist["R_I1_inst"]))),"max_abs_RE_inst":float(np.max(np.abs(hist["R_E_inst"]))),
+
+    hist=finalize_history(history)
+    statecheck=_runtime_state_check(ah,prep)
+    reached_final=(failure is None)
+    runtime_valid=bool(reached_final and statecheck["pass"])
+    if runtime_valid:
+        numerical_status="VALID"
+        termination_reason=None; termination_step=int(steps); termination_s=float(spec.T_final)
+        imax=int(np.argmax(hist["R"]))
+        R_max=float(hist["R"][imax]); s_R_max=float(hist["s"][imax]); I2_final=float(hist["I2"][-1])
+        G_bal_max=float(np.max(hist["G_bal"])); eta_tail_max=float(np.max(hist["eta_tail"]))
+        max_abs_RI1_inst=float(np.max(np.abs(hist["R_I1_inst"]))); max_abs_RE_inst=float(np.max(np.abs(hist["R_E_inst"])))
+    else:
+        reason=(failure or {}).get("reason","FINAL_RUNTIME_STATE_INVALID")
+        numerical_status="UNSTABLE" if reason in {"NONFINITE_SPECTRAL_STATE","NONFINITE_DIAGNOSTIC"} else "INVALID"
+        termination_reason=reason
+        termination_step=int((failure or {}).get("step",steps))
+        termination_s=float((failure or {}).get("s",termination_step*spec.dt))
+        R_max=s_R_max=I2_final=G_bal_max=eta_tail_max=max_abs_RI1_inst=max_abs_RE_inst=None
+
+    summary={
+        "case_id":prep.case_id,"parent_case_id":prep.parent_case_id,"completed":bool(reached_final),"runtime_valid":runtime_valid,
+        "numerical_status":numerical_status,"termination_reason":termination_reason,"termination_step":termination_step,"termination_s":termination_s,
+        "R_max":R_max,"s_R_max":s_R_max,"I2_final":I2_final,
+        "G_bal_max":G_bal_max,"eta_tail_max":eta_tail_max,
+        "max_abs_RI1_inst":max_abs_RI1_inst,"max_abs_RE_inst":max_abs_RE_inst,
         "admissibility":prep.admissibility,"state_check":statecheck}
-    budget_peak=modal_energy_budget(peak["ahat"],prep) if spec.mechanism else None
+    budget_peak=modal_energy_budget(peak["ahat"],prep) if (spec.mechanism and runtime_valid) else None
+
     if paths is not None:
         outdir=case_result_subdir(prep,paths)
-        arrays={"xi":prep.grid.xi,"r":prep.r,"Wo_R":prep.Wo_R,"b":prep.b,"g":prep.g,
-                "bhat_norm":np.fft.fft(prep.b)/prep.grid.N,"ghat_norm":np.fft.fft(prep.g)/prep.grid.N,
-                "ahat_initial":initial_ahat,"ahat_peak":peak["ahat"],"ahat_final":ah}
-        arrays.update({f"hist_{k}":v for k,v in hist.items()})
-        if budget_peak is not None:
-            for k,v in budget_peak.items(): arrays[f"budget_peak_{k}"]=v
-        atomic_save_npz(outdir/"result.npz",**arrays)
         atomic_write_json(outdir/"summary.json",summary)
-        # Completion marker is written last, after archive read-back.
-        with np.load(outdir/"result.npz",allow_pickle=False) as z: _=z["ahat_final"].shape
-        atomic_write_json(outdir/"COMPLETED.json",{"case_id":prep.case_id,"runtime_valid":summary["runtime_valid"],"summary_hash":stable_hash(summary),"archive_sha256":file_sha256(outdir/"result.npz")})
+        if runtime_valid:
+            arrays={"xi":prep.grid.xi,"r":prep.r,"Wo_R":prep.Wo_R,"b":prep.b,"g":prep.g,
+                    "bhat_norm":np.fft.fft(prep.b)/prep.grid.N,"ghat_norm":np.fft.fft(prep.g)/prep.grid.N,
+                    "ahat_initial":initial_ahat,"ahat_peak":peak["ahat"],"ahat_final":ah}
+            arrays.update({f"hist_{k}":v for k,v in hist.items()})
+            if budget_peak is not None:
+                for k,v in budget_peak.items(): arrays[f"budget_peak_{k}"]=v
+            atomic_save_npz(outdir/"result.npz",**arrays)
+            # Completion marker is written last, after archive read-back.
+            with np.load(outdir/"result.npz",allow_pickle=False) as z: _=z["ahat_final"].shape
+            atomic_write_json(outdir/"COMPLETED.json",{"case_id":prep.case_id,"runtime_valid":True,"summary_hash":stable_hash(summary),"archive_sha256":file_sha256(outdir/"result.npz")})
+        else:
+            atomic_write_json(outdir/"FAILED.json",{"case_id":prep.case_id,"runtime_valid":False,"numerical_status":numerical_status,
+                                                    "termination_reason":termination_reason,"termination_step":termination_step,"termination_s":termination_s,
+                                                    "summary_hash":stable_hash(summary)})
     return {"prep":prep,"history":hist,"summary":summary,"ahat_final":ah,"ahat_peak":peak["ahat"],"budget_peak":budget_peak}
 
 

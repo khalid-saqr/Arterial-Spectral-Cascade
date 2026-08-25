@@ -10,3 +10,9 @@ def test_full_verification_suite():
     report = full_verification_suite()
     assert report["pass"]
     assert all(item["pass"] for item in report["tests"])
+    names={item["name"] for item in report["tests"]}
+    required={"heterogeneous_linear_order","kdv_refinement","fractional_burgers_refinement",
+              "published_recovery_convergence","parent_pointwise_coefficients","field_resolution_refinement",
+              "heterogeneous_balance_refinement","aliasing_control","modal_budget","matched_mean_control",
+              "restart_equivalence","paired_restart_equivalence"}
+    assert required.issubset(names)

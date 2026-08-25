@@ -15,3 +15,8 @@ The package is checked against the current Mathematical Model and Solver Design.
 - Physics of Fluids/AIP plotting-template export: required.
 
 The expensive full-resolution computational study is not part of the unit-test suite. `FULL_STUDY` first requires compatible Solver Design verification and morphology-class-specific parameter selection.
+
+- Verified performance backend: required to pass optimized/reference residual, ETDRK4-step, and short-trajectory equivalence before activation.
+- Performance backend evidence: required in case metadata and in the full verification report.
+- Class-specific numerical settings: main DL/DM/DR calculations use only parameter-selection settings already accepted for that morphology class; explicit verification/convergence settings remain untouched.
+- Checkpoint optimization: frequent checkpoints use transactional uncompressed NPZ; final scientific archives retain the standard compressed format.

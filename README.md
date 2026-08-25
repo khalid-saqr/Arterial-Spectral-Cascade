@@ -90,6 +90,16 @@ The numerical implementation uses the signed Fourier convention of the Solver De
 
 The independent verification suite includes Fourier-sign and three-form identities, exact constant-coefficient propagation, fourth-order heterogeneous linear convergence, KdV refinement, a heterogeneous fractional Burgers-type limit, pointwise parent-coefficient recovery, published constant-coefficient recovery, field-resolution refinement, heterogeneous balance refinement, aliasing control, modal-energy closure, exact matched-mean construction, and single/paired restart equivalence. Numerically invalid trajectories terminate early and are excluded from convergence; strict JSON persistence rejects non-finite metadata.
 
+## Verified Colab performance backend
+
+Version 0.4 adds a CPU-oriented performance layer intended for Google Colab Free-tier execution without changing the Mathematical Model, the two-thirds projector, floating-point precision, ETDRK4 coefficients, convergence tolerances, or acceptance criteria. The default `optimized` backend is installed only after an automatic deterministic comparison with the preserved reference implementation. The check compares the heterogeneous residual, one ETDRK4 step, and a short trajectory in double precision; if the comparison fails, the package retains the reference backend. Set `ASC_BACKEND=reference` before importing the package to force the reference implementation.
+
+The optimized backend packs the two real heterogeneous derivative reconstructions into one complex inverse FFT, caches coefficient-only fields used by the exact balance diagnostics, reuses the physical reconstruction used by the explicit-scale diagnostic, and writes frequent checkpoint archives transactionally without compression while leaving final scientific result archives compressed. `PERFORMANCE_BACKEND_STATUS` records which backend is active and the equivalence errors; the same evidence is written into case metadata. The full verification suite includes the optimized/reference equivalence check.
+
+Parameter selection remains morphology-class specific. Main DL/DM/DR calculations now use the accepted `(N, dt)` for their own morphology class rather than automatically inheriting the globally most expensive resolution. Explicit `N` or `dt` supplied for verification or convergence calculations always overrides this behavior. Conservative global settings are retained only as fallbacks for non-disease code paths. This reduces work only where convergence has already established that the coarser setting is scientifically sufficient.
+
+`benchmark_performance_backend(prep, steps=...)` provides an informational reference/optimized timing comparison for the current CPU. Timing is never an acceptance criterion.
+
 ## Geometry-derived morphology input
 
 A real anatomical or disease-model geometry can be admitted only after it has been converted into the Mathematical Model input $\Psi_D$. The helper `geometry_derived_spec(...)` accepts a sampled normalized morphology field and requires provenance and a declared characteristic morphology scale. It performs no hidden interpolation and does not construct a radius-dependent Womersley field.

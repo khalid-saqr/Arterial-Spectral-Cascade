@@ -8,6 +8,34 @@ from .storage import *
 from .planning import *
 from .parent import *
 
+_BASE_CASE_RECORD_TO_SPEC = _base.case_record_to_spec
+
+
+def _class_numerical_settings(report):
+    """Return verified per-morphology-class N/dt settings from parameter selection."""
+    out={}
+    for cls,entry in report.get("convergence",{}).items():
+        N=entry.get("accepted_N"); dt=entry.get("accepted_dt")
+        if N is not None and dt is not None:
+            out[str(cls)]={"N":int(N),"dt":float(dt),"source_case_id":entry.get("case_id")}
+    return out
+
+
+def case_record_to_spec(record, Wo, N=None, dt=None, T_final=None, mechanism=False, cfg=STUDY_CONFIG):
+    """Use class-specific converged settings when N/dt are not explicitly supplied.
+
+    Explicit N/dt always win, which keeps preflight and convergence studies
+    unchanged.  Main calculations can therefore use the coarsest resolution and
+    largest timestep already demonstrated converged for their morphology class.
+    """
+    settings=cfg.get("_CLASS_NUMERICAL_SETTINGS",{})
+    cls=str(record.get("case_class",""))
+    if cls in settings:
+        if N is None: N=int(settings[cls]["N"])
+        if dt is None: dt=float(settings[cls]["dt"])
+    return _BASE_CASE_RECORD_TO_SPEC(record,Wo,N=N,dt=dt,T_final=T_final,mechanism=mechanism,cfg=cfg)
+
+
 def convergence_acceptance(rows, x_name, i2tol, obstol):
     """Compatibility wrapper for the Solver Design full-history acceptance function."""
     from .planning import convergence_acceptance as _accept
@@ -34,15 +62,41 @@ def run_parameter_selection(paths, cfg=STUDY_CONFIG, progress=True):
         parameter_selection["convergence"][cls]={"case_id":cid,"spatial":spatial,"temporal":temporal,"accepted_N":Nacc,"accepted_dt":dtacc}
         if Nacc is None or dtacc is None: parameter_selection["pass"]=False
     if parameter_selection["pass"]:
-        parameter_selection["recommended_N"]=int(max(v["accepted_N"] for v in parameter_selection["convergence"].values()))
-        parameter_selection["recommended_dt"]=float(min(v["accepted_dt"] for v in parameter_selection["convergence"].values()))
+        settings=_class_numerical_settings(parameter_selection)
+        parameter_selection["class_numerical_settings"]=settings
+        # Conservative global values remain as fallbacks for code paths that do
+        # not represent a disease morphology class (e.g. parent verification).
+        parameter_selection["recommended_N"]=int(max(v["N"] for v in settings.values()))
+        parameter_selection["recommended_dt"]=float(min(v["dt"] for v in settings.values()))
     atomic_write_json(paths.verification/"PARAMETER_SELECTION_REPORT.json",parameter_selection); return parameter_selection
 
 
+def ensure_parameter_selection(paths,cfg=STUDY_CONFIG,progress=True):
+    status=_base.parameter_selection_status(paths)
+    if _base._status_compatible(status,"parameter_selection"):
+        pg=status
+        print("PARAMETER_SELECTION: reusing compatible PASS status.")
+    else:
+        print("PARAMETER_SELECTION: Mathematical Model preflight and convergence...")
+        pg=run_parameter_selection(paths,cfg,progress=progress)
+    if not pg.get("pass",False):
+        raise RuntimeError("PARAMETER_SELECTION did not establish converged numerical settings for the main calculations.")
+    settings=pg.get("class_numerical_settings") or _class_numerical_settings(pg)
+    if not settings:
+        raise RuntimeError("PARAMETER_SELECTION PASS contains no class-specific converged numerical settings.")
+    cfg["_CLASS_NUMERICAL_SETTINGS"]=settings
+    cfg["STUDY_N"]=int(pg.get("recommended_N",max(v["N"] for v in settings.values())))
+    cfg["STUDY_DT"]=float(pg.get("recommended_dt",min(v["dt"] for v in settings.values())))
+    return pg
+
+
 # Patch the preserved orchestration module so its existing FULL_STUDY path resolves
-# the Solver Design v2 paired runner and convergence implementation.
+# Solver Design v2 plus class-specific converged settings. Explicit convergence
+# calls remain unchanged because they always pass N/dt explicitly.
 _base.run_parameter_selection = run_parameter_selection
+_base.ensure_parameter_selection = ensure_parameter_selection
 _base.convergence_acceptance = convergence_acceptance
+_base.case_record_to_spec = case_record_to_spec
 _base.run_paired_case = run_paired_case
 _base.spatial_convergence = spatial_convergence
 _base.temporal_convergence = temporal_convergence

@@ -29,8 +29,16 @@ from .study import (
     run_full_study,
     run_study_mode,
 )
+from . import performance as _performance
+from .performance import benchmark_performance_backend, verify_optimized_backend_equivalence
 
-__version__ = "0.3.0"
+PERFORMANCE_BACKEND_STATUS = _performance.install_performance_backend()
+_performance.PERFORMANCE_BACKEND_STATUS = PERFORMANCE_BACKEND_STATUS
+# Rebind after installation so the exported verification suite includes the
+# optimized/reference equivalence check when the optimized backend is active.
+from .parent import full_verification_suite as full_verification_suite
+
+__version__ = "0.4.0"
 
 __all__ = [
     "MODEL_SCHEMA","SOLVER_SCHEMA","RESULT_SCHEMA","PARENT_REFERENCE_SCHEMA",
@@ -40,4 +48,5 @@ __all__ = [
     "run_parent_reference_audit","run_paired_case","full_verification_suite",
     "STUDY_CONFIG","MORPHOLOGY_CLASSES","morphology_class_table","configured_case_table",
     "case_record_to_spec","geometry_derived_spec","run_full_study","run_study_mode",
+    "PERFORMANCE_BACKEND_STATUS","benchmark_performance_backend","verify_optimized_backend_equivalence",
 ]

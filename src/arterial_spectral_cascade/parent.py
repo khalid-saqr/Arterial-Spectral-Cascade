@@ -27,16 +27,16 @@ def run_parent_reference_audit(
     T_final: float=60.0,
     progress: bool=True
 ) -> Dict[str,Any]:
-    """Audit the Stage-2 parent baseline without forcing legacy resonance topology.
+    """Audit the Solver Design parent baseline without forcing legacy resonance topology.
 
     Hard status:
-      * each Stage-2 P0 trajectory completes and remains numerically valid;
+      * each Solver Design P0 trajectory completes and remains numerically valid;
       * required scalar diagnostics are finite;
       * I2_final > 0 and R_max >= 0;
       * the constant-coefficient global balance remains dissipative within tolerance.
 
-    Non-gating diagnostic:
-      * whether the Stage-2 baseline reproduces the legacy published discrete
+    Non-controlling diagnostic:
+      * whether the Solver Design baseline reproduces the legacy published discrete
         topology with an interior maximum at Wo=15.
     """
     rows=[]
@@ -88,7 +88,7 @@ def run_parent_reference_audit(
 
     return {
         "reference_schema":PARENT_REFERENCE_SCHEMA,
-        "stage2_parent_baseline":{
+        "solver_design_parent_baseline":{
             "parameters":{
                 "Wo":list(PARENT_WO_SWEEP),
                 "N":int(N),
@@ -105,7 +105,7 @@ def run_parent_reference_audit(
             "reported_peak_Wo":15.0,
             "topology_match":legacy_topology_match,
             "status":"MATCH" if legacy_topology_match else "DIFFERENT",
-            "gating":False,
+            "acceptance_controlling":False,
             "criterion":"peak_Wo == 15 and R_max(15) > R_max(10), R_max(20)",
         },
         "pass":pass_numerical,
@@ -129,7 +129,7 @@ def _save_pair_checkpoint(parent: PreparedCase, mm: PreparedCase, paths: Project
                           ahp: np.ndarray, ahm: np.ndarray, hp: Dict[str,List[float]], hm: Dict[str,List[float]], comp: Dict[str,List[float]],
                           peakp: Dict[str,Any], peakm: Dict[str,Any]) -> None:
     path=_pair_checkpoint_path(parent,mm,paths)
-    pairhash=stable_hash({"parent":parent.case_id,"mm":mm.case_id,"parent_spec":_jsonable(parent.spec),"b":array_sha256(parent.b),"g":array_sha256(parent.g),"k":array_sha256(parent.grid.k),"mask":array_sha256(parent.grid.mask),"ic":array_sha256(initial_condition(parent.spec,parent.grid))},32)
+    pairhash=stable_hash({"parent":parent.case_id,"mm":mm.case_id,"parent_spec":_jsonable(parent.spec),"psi_D":array_sha256(parent.psi_D),"b":array_sha256(parent.b),"g":array_sha256(parent.g),"k":array_sha256(parent.grid.k),"mask":array_sha256(parent.grid.mask),"ic":array_sha256(initial_condition(parent.spec,parent.grid))},32)
     data={"step":np.array(step,dtype=np.int64),"ahat_parent":ahp,"ahat_mm":ahm,"pair_hash":np.array(pairhash),
           "peakp_R":np.array(float(peakp["R"])),"peakp_step":np.array(int(peakp["step"])),"peakp_ahat":peakp["ahat"],
           "peakm_R":np.array(float(peakm["R"])),"peakm_step":np.array(int(peakm["step"])),"peakm_ahat":peakm["ahat"]}
@@ -141,7 +141,7 @@ def _save_pair_checkpoint(parent: PreparedCase, mm: PreparedCase, paths: Project
 def _load_pair_checkpoint(parent: PreparedCase, mm: PreparedCase, paths: ProjectPaths) -> Optional[Dict[str,Any]]:
     path=_pair_checkpoint_path(parent,mm,paths)
     if not path.exists(): return None
-    expected=stable_hash({"parent":parent.case_id,"mm":mm.case_id,"parent_spec":_jsonable(parent.spec),"b":array_sha256(parent.b),"g":array_sha256(parent.g),"k":array_sha256(parent.grid.k),"mask":array_sha256(parent.grid.mask),"ic":array_sha256(initial_condition(parent.spec,parent.grid))},32)
+    expected=stable_hash({"parent":parent.case_id,"mm":mm.case_id,"parent_spec":_jsonable(parent.spec),"psi_D":array_sha256(parent.psi_D),"b":array_sha256(parent.b),"g":array_sha256(parent.g),"k":array_sha256(parent.grid.k),"mask":array_sha256(parent.grid.mask),"ic":array_sha256(initial_condition(parent.spec,parent.grid))},32)
     with np.load(path,allow_pickle=False) as z:
         if str(z["pair_hash"].item())!=expected: raise RuntimeError("Paired checkpoint case-metadata mismatch.")
         def hist(prefix): return {k[len(prefix)+1:]:z[k].tolist() for k in z.keys() if k.startswith(prefix+"_")}
@@ -152,7 +152,8 @@ def _load_pair_checkpoint(parent: PreparedCase, mm: PreparedCase, paths: Project
 
 
 def run_paired_case(parent: PreparedCase, paths: Optional[ProjectPaths]=None, resume: bool=True, progress: bool=False) -> Dict[str,Any]:
-    if parent.admissibility["status"]!="ADMISSIBLE": raise RuntimeError(f"Parent disease case is not admissible: {parent.admissibility['status']}")
+    if parent.spec.case_class not in {"P1","DL","DM","DR"}: raise ValueError("Paired runs require a heterogeneous P1/DL/DM/DR parent case.")
+    if parent.admissibility["status"]!="ADMISSIBLE": raise RuntimeError(f"Parent heterogeneous case is not admissible: {parent.admissibility['status']}")
     mm=make_matched_mean(parent); sp=parent.spec; steps=int(round(sp.T_final/sp.dt))
     if abs(steps*sp.dt-sp.T_final)>1e-10*max(1.0,sp.T_final): raise ValueError("T_final/dt must be an integer.")
     if paths is not None: save_case_metadata(parent,paths); save_case_metadata(mm,paths)
@@ -190,7 +191,7 @@ def run_paired_case(parent: PreparedCase, paths: Optional[ProjectPaths]=None, re
     budget_peak=modal_energy_budget(peakp["ahat"],parent) if parent.spec.mechanism else None
     if paths is not None:
         outdir=case_result_subdir(parent,paths); outdir.mkdir(parents=True,exist_ok=True)
-        arrays={"xi":parent.grid.xi,"r":parent.r,"Wo_R":parent.Wo_R,"b":parent.b,"g":parent.g,
+        arrays={"xi":parent.grid.xi,"psi_D_raw":parent.psi_D_raw,"psi_D":parent.psi_D,"b":parent.b,"g":parent.g,
                 "ahat_het_peak":peakp["ahat"],"ahat_mm_peak":peakm["ahat"],"ahat_het_final":ahp,"ahat_mm_final":ahm}
         arrays.update({f"het_{k}":v for k,v in HP.items()}); arrays.update({f"mm_{k}":v for k,v in HM.items()}); arrays.update({f"cmp_{k}":v for k,v in C.items()})
         if budget_peak is not None:
@@ -208,7 +209,7 @@ def run_paired_case(parent: PreparedCase, paths: Optional[ProjectPaths]=None, re
 
 def verify_paired_restart_equivalence() -> Dict[str,Any]:
     """Verify exact restart equivalence for the heterogeneous/matched-mean pair."""
-    spec=CaseSpec("DS",Wo0=10,N=48,dt=.002,T_final=.04,k0=.5,sigma=.01,w=2.0,p=1,
+    spec=CaseSpec("DL",Wo0=10,N=48,dt=.002,T_final=.04,k0=.5,chi_b=.01,chi_g=.01,w=2.0,p=1,
                   R0_over_L0=.01,slow_variation_limit=.1,output_every_steps=2,checkpoint_every_steps=5)
     parent_case=prepare_case(spec); mm=make_matched_mean(parent_case)
     ep=etd_coefficients(parent_case); em=etd_coefficients(mm)

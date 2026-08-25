@@ -1,2 +1,5 @@
-.........                                                                [100%]
-9 passed in 1.67s
+PR1 Mathematical Model compliance local verification
+pytest -q
+17 passed in 2.88s
+Core/full verification suite: PASS
+Miniature DL/DR preflight and parameter-selection serialization: PASS

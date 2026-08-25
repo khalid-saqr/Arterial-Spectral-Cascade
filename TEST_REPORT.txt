@@ -1,5 +1,6 @@
-PR1 Mathematical Model compliance local verification
-pytest -q
-17 passed in 2.88s
-Core/full verification suite: PASS
-Miniature DL/DR preflight and parameter-selection serialization: PASS
+Solver Design compliance local verification
+PYTHONPATH=src pytest -q
+22 passed
+Full independent verification suite: 16/16 PASS
+Includes KdV, fractional Burgers-type, published recovery, field resolution, heterogeneous balances, aliasing, matched mean, restart, and numerical-failure regression coverage.
+Miniature DL full-history parameter selection: PASS (spatial convergence established before temporal refinement).

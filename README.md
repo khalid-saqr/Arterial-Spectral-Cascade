@@ -86,7 +86,9 @@ $$
 -\widetilde g\,\Lambda a.
 $$
 
-The numerical implementation uses the signed Fourier convention of the Solver Design, a symmetric two-thirds projector, ETDRK4 with cancellation-safe $\varphi$ functions, the dynamically generated zero mode, exact heterogeneous integral balances, modal-energy budgets, restartable persistence, and strict JSON-safe failure records.
+The numerical implementation uses the signed Fourier convention of the Solver Design, a symmetric two-thirds projector, ETDRK4 with cancellation-safe $\varphi$ functions, and the dynamically generated zero mode. Every saved state records the exact heterogeneous balance quantities, $\eta_{\mathrm{tail}}$, and the explicit-scale screening quantity $\chi_h$. Disease calculations are advanced with their exact matched-mean controls. Spatial and temporal acceptance uses the complete common-time histories of $I_2$, $R$, $\Delta R$, and $D_2$, together with $R_{\max}$, its occurrence time, morphology/coefficient projection errors, tail behavior, and integrated balance residuals. Temporal refinement is performed only after a converged spatial resolution has been established.
+
+The independent verification suite includes Fourier-sign and three-form identities, exact constant-coefficient propagation, fourth-order heterogeneous linear convergence, KdV refinement, a heterogeneous fractional Burgers-type limit, pointwise parent-coefficient recovery, published constant-coefficient recovery, field-resolution refinement, heterogeneous balance refinement, aliasing control, modal-energy closure, exact matched-mean construction, and single/paired restart equivalence. Numerically invalid trajectories terminate early and are excluded from convergence; strict JSON persistence rejects non-finite metadata.
 
 ## Geometry-derived morphology input
 

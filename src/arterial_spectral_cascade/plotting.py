@@ -335,7 +335,7 @@ LABELS = {
     "xi": r"$\xi$",
     "s": r"$s$",
     "Wo": r"$\mathrm{Wo}$",
-    "r": r"$r(\xi)$",
+    "psi_D": r"$\Psi_D(\xi)$",
     "b": r"$b(\xi)$",
     "g": r"$g(\xi)$",
     "R": r"$R$",
@@ -372,46 +372,47 @@ if __name__ == "__main__":
 # ---------------------------------------------------------------------------
 # Study-specific publication figures
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Study-specific publication figures
+# ---------------------------------------------------------------------------
 import json, time
 import numpy as np
 import pandas as pd
 from .core import make_grid, prepare_case, RESULT_SCHEMA
 from .storage import atomic_write_json
 
+
 def _result_dir_for_case(paths, case_class, case_id):
-    base={"DS":"stenosis","DA":"dilation","DM":"optional","P0":"parent","P1":"parent","H0":"parent"}.get(case_class,"optional")
+    base={"DL":"localized","DM":"multiple","DR":"distributed","MM":"matched_mean",
+          "P0":"parent","P1":"parent","H0":"parent"}.get(case_class,"optional")
     return paths.results/base/case_id
 
 
-def figure_evidence_profile_atlas(cfg=None):
-    from .study import STUDY_CONFIG, PRIMARY_PROFILE_IDS, EVIDENCE_PROFILES, profile_spec
+def figure_morphology_atlas(cfg=None):
+    from .study import STUDY_CONFIG, case_record_to_spec
     if cfg is None: cfg=STUDY_CONFIG
-    apply_pof_style(); fig,axs=new_panels(2,2,width="double",height_in=5.8)
-    for cls,axr,axc in [("DS",axs[0,0],axs[1,0]),("DA",axs[0,1],axs[1,1])]:
-        for pid in [x for x in PRIMARY_PROFILE_IDS if EVIDENCE_PROFILES[x]["case_class"]==cls]:
-            prep=prepare_case(profile_spec(pid,15.0,width=cfg["PRIMARY_WIDTH"],N=512,dt=cfg["STUDY_DT"],T_final=1.0,cfg=cfg))
-            idx=[x for x in PRIMARY_PROFILE_IDS if EVIDENCE_PROFILES[x]["case_class"]==cls].index(pid)
-            sty=series_style(idx)
-            axr.plot(prep.grid.xi,prep.r,label=pid,**sty)
-            axc.plot(prep.grid.xi,prep.b/prep.b_bar,label=pid,**sty)
-        axr.set(xlabel=r"$\xi$",ylabel=r"$r(\xi)$"); axr.legend(frameon=False)
-        axc.set(xlabel=r"$\xi$",ylabel=r"$b/\bar b$"); axc.legend(frameon=False)
-    for ax,label in zip(axs.ravel(), ["a","b","c","d"]): panel_label(ax,label)
-    return fig
+    records=list(cfg.get("DISEASE_CASES",()))
+    if not records: raise ValueError("No configured disease cases are available for a morphology atlas.")
+    apply_pof_style(); fig,axs2=new_panels(1,2,width="double",height_in=3.4); axs=axs2[0]
+    wo=15.0 if 15.0 in cfg.get("COARSE_WO",()) else float(cfg["COARSE_WO"][0])
+    for idx,record in enumerate(records):
+        prep=prepare_case(case_record_to_spec(record,wo,N=max(128,min(512,int(cfg["STUDY_N"]))),T_final=1.0,cfg=cfg))
+        label=str(record["case_id"]); sty=series_style(idx)
+        axs[0].plot(prep.grid.xi,prep.psi_D,label=label,**sty)
+        axs[1].plot(prep.grid.xi,prep.b/prep.b_bar,label=label,**sty)
+    axs[0].set(xlabel=r"$\xi$",ylabel=r"$\Psi_D(\xi)$"); axs[0].legend(frameon=False)
+    axs[1].set(xlabel=r"$\xi$",ylabel=r"$b/\bar b$"); axs[1].legend(frameon=False)
+    panel_label(axs[0],"a"); panel_label(axs[1],"b"); return fig
 
 
 def figure_parent_reference_audit(paths):
     f=paths.verification/"PARENT_REFERENCE_AUDIT.json"
     if not f.exists(): raise FileNotFoundError(f)
-    d=json.loads(f.read_text())
-    rows=d["stage2_parent_baseline"]["rows"]
-    legacy=d["legacy_reference_audit"]
+    d=json.loads(f.read_text()); rows=d["solver_design_parent_baseline"]["rows"]; legacy=d["legacy_reference_audit"]
     apply_pof_style(); fig,ax=new_figure("single",height_in=3.0)
-    ax.plot([r["Wo"] for r in rows],[r["R_max"] for r in rows],label="Stage-2 parent baseline",**series_style(0))
+    ax.plot([r["Wo"] for r in rows],[r["R_max"] for r in rows],label="Solver Design parent baseline",**series_style(0))
     ax.axvline(float(legacy["reported_peak_Wo"]),linestyle="--",linewidth=1.0,label="Legacy reported peak")
-    ax.set(xlabel=r"$\mathrm{Wo}$",ylabel=r"$R_{\max}$")
-    ax.legend(frameon=False)
-    return fig
+    ax.set(xlabel=r"$\mathrm{Wo}$",ylabel=r"$R_{\max}$"); ax.legend(frameon=False); return fig
 
 
 def coupling_matrix_from_archive(archive_path, mode_limit=10):
@@ -427,27 +428,22 @@ def coupling_matrix_from_archive(archive_path, mode_limit=10):
 
 def figure_R1_from_archive(archive_path):
     apply_pof_style()
-    with np.load(archive_path,allow_pickle=False) as z: xi=z["xi"]; r=z["r"]; b=z["b"]; g=z["g"]
+    with np.load(archive_path,allow_pickle=False) as z: xi=z["xi"]; psi=z["psi_D"]; b=z["b"]; g=z["g"]
     N=len(xi); Lg=(xi[1]-xi[0])*N; grid=make_grid(N,Lg); bb=np.mean(b); gg=np.mean(g); bh=np.fft.fft(b-bb)/N; gh=np.fft.fft(g-gg)/N; modes,H=coupling_matrix_from_archive(archive_path)
     fig,axs=new_panels(2,2,width="double",height_in=5.8)
-    axs[0,0].plot(xi,r,linestyle="-",linewidth=DEFAULT_LINE_PT); axs[0,0].set(xlabel=r"$\xi$",ylabel=r"$r(\xi)$")
+    axs[0,0].plot(xi,psi,linestyle="-",linewidth=DEFAULT_LINE_PT); axs[0,0].set(xlabel=r"$\xi$",ylabel=r"$\Psi_D(\xi)$")
     axs[0,1].plot(xi,b/bb,label=r"$b/\bar b$",**series_style(0)); axs[0,1].plot(xi,g/gg,label=r"$g/\bar g$",**series_style(1)); axs[0,1].legend(frameon=False); axs[0,1].set(xlabel=r"$\xi$")
     kk=np.fft.fftshift(grid.k); axs[1,0].semilogy(kk,np.fft.fftshift(np.abs(bh))+1e-30,label=r"$|\widehat{\tilde b}|$",linestyle="-"); axs[1,0].semilogy(kk,np.fft.fftshift(np.abs(gh))+1e-30,label=r"$|\widehat{\tilde g}|$",linestyle="--"); axs[1,0].legend(frameon=False); axs[1,0].set(xlabel=r"$k$")
     im=axs[1,1].imshow(H,origin="lower",aspect="auto",extent=[modes.min(),modes.max(),modes.min(),modes.max()]); axs[1,1].set(xlabel=r"$k_n$",ylabel=r"$k_\ell$"); fig.colorbar(im,ax=axs[1,1],shrink=.8)
-    for ax,label in zip(axs.ravel(), ["a","b","c","d"]): panel_label(ax,label)
+    for ax,label in zip(axs.ravel(),["a","b","c","d"]): panel_label(ax,label)
     return fig
 
 
-def figure_R2_resonance_landscape(df, case_class):
-    apply_pof_style(); sub=df[df.case_class==case_class].copy(); fig,ax=new_figure("double",height_in=4.3)
-    y=(100.0*sub.sigma.values if case_class=="DS" else 1.0+sub.sigma.values)
-    if sub.profile_id.nunique()>=2 and sub.Wo.nunique()>=3 and len(sub)>=6:
-        tri=ax.tricontourf(sub.Wo.values,y,sub.R_max_het.values,levels=14); fig.colorbar(tri,ax=ax,label=r"$R_{\max}$")
-        ax.scatter(sub.Wo,y,s=10,facecolors="none",edgecolors="k",linewidths=.5)
-    else:
-        sc=ax.scatter(sub.Wo,y,c=sub.R_max_het); fig.colorbar(sc,ax=ax,label=r"$R_{\max}$")
-    ylabel=("diameter stenosis (%)" if case_class=="DS" else r"maximum diameter ratio $D_{max}/D_0$")
-    ax.set(xlabel=r"$\mathrm{Wo}$",ylabel=ylabel); return fig
+def figure_R2_resonance_landscape(df,case_class):
+    apply_pof_style(); sub=df[df.case_class==case_class].copy(); fig,ax=new_figure("double",height_in=4.0)
+    for idx,(cid,gp) in enumerate(sub.groupby("study_case_id")):
+        gp=gp.sort_values("Wo"); ax.plot(gp.Wo,gp.R_max_het,label=str(cid),**series_style(idx))
+    ax.set(xlabel=r"$\mathrm{Wo}$",ylabel=r"$R_{\max}$"); ax.legend(frameon=False); return fig
 
 
 def figure_R3_from_archive(archive_path):
@@ -455,8 +451,7 @@ def figure_R3_from_archive(archive_path):
     apply_pof_style(); fig,axs2=new_panels(2,1,width="single",height_in=5.4,sharex=True); axs=axs2[:,0]
     axs[0].plot(Hs,HR,label="heterogeneous",**series_style(0)); axs[0].plot(Ms,MR,label="matched mean",**series_style(1)); axs[0].set_ylabel(r"$R$"); axs[0].legend(frameon=False)
     axs[1].plot(Cs,dR,label=r"$\Delta R$",linestyle="-"); ax2=axs[1].twinx(); ax2.plot(Cs,D2,linestyle="--",label=r"$D_2$"); axs[1].set(xlabel=r"$s$",ylabel=r"$\Delta R$"); ax2.set_ylabel(r"$D_2$")
-    panel_label(axs[0],"a"); panel_label(axs[1],"b")
-    return fig
+    panel_label(axs[0],"a"); panel_label(axs[1],"b"); return fig
 
 
 def figure_R4_from_archive(archive_path):
@@ -468,58 +463,46 @@ def figure_R4_from_archive(archive_path):
     for idx,(key,label) in enumerate([("budget_peak_T_N","nonlinear"),("budget_peak_T_b_tilde",r"$\tilde b$"),("budget_peak_T_g_tilde",r"$\tilde g$"),("budget_peak_T_g_bar",r"$\bar g$")]): axs[0].plot(modes,vals[key],label=label,linestyle=("-","--","-.",":")[idx])
     axs[0].set(xlabel=r"$k$",ylabel=r"$T_j(k)$"); axs[0].legend(frameon=False,ncol=2)
     hv=[float(vals[k]) for k in ["budget_peak_PiH_N","budget_peak_PiH_b_tilde","budget_peak_PiH_g_tilde","budget_peak_PiH_g_bar"]]; axs[1].bar([r"$N$",r"$\tilde b$",r"$\tilde g$",r"$\bar g$"],hv); axs[1].axhline(0,lw=.8); axs[1].set(ylabel=r"$\Pi_j^H$")
-    panel_label(axs[0],"a"); panel_label(axs[1],"b")
-    return fig
+    panel_label(axs[0],"a"); panel_label(axs[1],"b"); return fig
 
 
-def figure_R5_width(df):
-    apply_pof_style(); good=df[df.status=="ADMISSIBLE"].sort_values("w"); fig,ax=new_figure("single",height_in=3.2)
-    ax.plot(good.w,good.Delta_R_maxima,**series_style(0)); ax.set(xlabel=r"$w$",ylabel=r"$R_{\max,het}-R_{\max,mm}$"); return fig
+def figure_morphology_scale(df):
+    apply_pof_style(); good=df[df.status=="ADMISSIBLE"].sort_values("factor"); fig,ax=new_figure("single",height_in=3.2)
+    ax.plot(good.factor,good.Delta_R_maxima,**series_style(0)); ax.set(xlabel="morphology scale factor",ylabel=r"$R_{\max,het}-R_{\max,mm}$"); return fig
 
 
-def regenerate_available_figures(paths, cfg=None):
+def regenerate_available_figures(paths,cfg=None):
     from .study import STUDY_CONFIG
     if cfg is None: cfg=STUDY_CONFIG
     paths.figures.mkdir(parents=True,exist_ok=True); made=[]
-    # Evidence profile atlas and the non-coercive parent-reference audit.
-    if cfg.get("PRIMARY_WIDTH") is not None:
-        fig=figure_evidence_profile_atlas(cfg); made += [str(p) for p in save_pof_figure(fig,paths.figures/"R1_evidence_severity_atlas",alt_text="Evidence-referenced narrowing and dilation radius fields and their dispersion-coefficient imprints.")]; plt.close(fig)
+    if cfg.get("DISEASE_CASES"):
+        fig=figure_morphology_atlas(cfg); made += [str(p) for p in save_pof_figure(fig,paths.figures/"R1_morphology_atlas",alt_text="Configured disease morphology fields and their dispersion-coefficient imprints.")]; plt.close(fig)
     if (paths.verification/"PARENT_REFERENCE_AUDIT.json").exists():
-        fig=figure_parent_reference_audit(paths); made += [str(p) for p in save_pof_figure(fig,paths.figures/"V_parent_reference_audit",alt_text="Stage-2 parent baseline spectral-broadening response across Womersley number with the legacy reported peak location indicated for reference.")]; plt.close(fig)
-
+        fig=figure_parent_reference_audit(paths); made += [str(p) for p in save_pof_figure(fig,paths.figures/"V_parent_reference_audit",alt_text="Solver Design parent baseline spectral-broadening response across Womersley number with the legacy reported peak indicated for reference.")]; plt.close(fig)
     primary=paths.tables/"primary_resonance.csv"
     if primary.exists():
         df=pd.read_csv(primary)
-        for cls in ["DS","DA"]:
-            sub=df[df.case_class==cls]
-            if sub.empty: continue
-            fig=figure_R2_resonance_landscape(df,cls); made += [str(p) for p in save_pof_figure(fig,paths.figures/f"R2_{cls}_resonance_landscape",alt_text=f"Resonance landscape for {cls} evidence-referenced severity representations across Womersley number.")]; plt.close(fig)
-        # R1 detailed coupling and R3 matched mean use the objectively selected mechanism source cases when available.
+        for cls in ["DL","DM","DR"]:
+            if (df.case_class==cls).any():
+                fig=figure_R2_resonance_landscape(df,cls); made += [str(p) for p in save_pof_figure(fig,paths.figures/f"R2_{cls}_resonance",alt_text=f"Spectral-broadening response across Womersley number for configured {cls} coefficient-space morphology cases.")]; plt.close(fig)
         sf=paths.tables/"mechanism_selection.csv"
         if sf.exists():
             sel=pd.read_csv(sf)
             for _,row in sel.iterrows():
                 arc=_result_dir_for_case(paths,row.case_class,row.source_case_id)/"paired_result.npz"
                 if arc.exists():
-                    fig=figure_R1_from_archive(arc); made += [str(p) for p in save_pof_figure(fig,paths.figures/f"R1_{row.profile_id}_geometry_coupling",alt_text=f"Geometry-to-coefficient-to-modal-coupling representation for {row.profile_id}.")]; plt.close(fig)
-                    fig=figure_R3_from_archive(arc); made += [str(p) for p in save_pof_figure(fig,paths.figures/f"R3_{row.profile_id}_matched_mean",alt_text=f"Heterogeneous and matched-mean spectral-broadening comparison for {row.profile_id}.")]; plt.close(fig)
-
-    # Mechanism archives are recognized by persisted budget arrays.
-    for branch in ["stenosis","dilation"]:
+                    cid=str(row.study_case_id)
+                    fig=figure_R1_from_archive(arc); made += [str(p) for p in save_pof_figure(fig,paths.figures/f"R1_{cid}_morphology_coupling",alt_text=f"Morphology-to-coefficient-to-modal-coupling representation for {cid}.")]; plt.close(fig)
+                    fig=figure_R3_from_archive(arc); made += [str(p) for p in save_pof_figure(fig,paths.figures/f"R3_{cid}_matched_mean",alt_text=f"Heterogeneous and matched-mean spectral-broadening comparison for {cid}.")]; plt.close(fig)
+    for branch in ["localized","multiple","distributed"]:
         for arc in (paths.results/branch).glob("*/paired_result.npz"):
             try:
                 with np.load(arc,allow_pickle=False) as z: has="budget_peak_T_N" in z.files
                 if has:
-                    fig=figure_R4_from_archive(arc); made += [str(p) for p in save_pof_figure(fig,paths.figures/f"R4_{branch}_{arc.parent.name}",alt_text=f"Modal and high-wavenumber energy-rate decomposition for the selected {branch} mechanistic-analysis case.")]; plt.close(fig)
-            except Exception:
-                continue
-    for cls in ["DS","DA"]:
-        wf=paths.tables/f"width_{cls}.csv"
-        if wf.exists():
-            dfw=pd.read_csv(wf); fig=figure_R5_width(dfw); made += [str(p) for p in save_pof_figure(fig,paths.figures/f"R5_{cls}_width_selectivity",alt_text=f"Axial-scale dependence of the heterogeneous minus matched-mean peak spectral-broadening response for {cls}.")]; plt.close(fig)
-    atomic_write_json(paths.figures/"FIGURE_INDEX.json",{"files":made,"result_schema":RESULT_SCHEMA,"generated_unix":time.time()})
-    return made
-
-# ---------------------------------------------------------------------------
-# Full-study orchestration: one Run all, interruption-safe and restartable.
-# ---------------------------------------------------------------------------
+                    fig=figure_R4_from_archive(arc); made += [str(p) for p in save_pof_figure(fig,paths.figures/f"R4_{branch}_{arc.parent.name}",alt_text=f"Modal and high-wavenumber energy-rate decomposition for a selected {branch} coefficient-space morphology case.")]; plt.close(fig)
+            except Exception: continue
+    for wf in paths.tables.glob("morphology_scale_*.csv"):
+        dfw=pd.read_csv(wf)
+        if not dfw.empty:
+            fig=figure_morphology_scale(dfw); made += [str(p) for p in save_pof_figure(fig,paths.figures/f"R5_{wf.stem}",alt_text="Morphology-scale dependence of the heterogeneous minus matched-mean peak spectral-broadening response.")]; plt.close(fig)
+    atomic_write_json(paths.figures/"FIGURE_INDEX.json",{"files":made,"result_schema":RESULT_SCHEMA,"generated_unix":time.time()}); return made

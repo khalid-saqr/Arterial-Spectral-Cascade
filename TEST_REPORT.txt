@@ -1,8 +1,0 @@
-Colab performance redesign local verification
-PYTHONPATH=src pytest -q
-25 passed
-Full independent verification suite: 17/17 PASS (includes optimized/reference performance-backend equivalence)
-Representative optimized/reference equivalence: residual 1.85e-18, one-step 6.71e-22, 12-step trajectory 8.09e-21 relative error.
-Representative CPU benchmark at N=512: optimized ETDRK4 backend approximately 1.13x faster over 120 heterogeneous steps in this environment; timing is informational and hardware-dependent.
-Class-specific convergence-setting regression: PASS.
-Transactional uncompressed checkpoint regression: PASS.

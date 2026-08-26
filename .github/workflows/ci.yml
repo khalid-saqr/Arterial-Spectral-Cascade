@@ -1,0 +1,134 @@
+name: Research software CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Python ${{ matrix.python-version }} tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install package and tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[test]'
+      - name: Compile source and tests
+        run: python -m compileall -q src tests
+      - name: Run test suite
+        run: python -m pytest -q
+
+  scientific-verification:
+    name: Scientific verification (${{ matrix.backend }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [optimized, reference]
+    env:
+      ASC_BACKEND: ${{ matrix.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[test]'
+      - name: Run verification and restart checks
+        run: |
+          python - <<'PY'
+          import arterial_spectral_cascade as asc
+          from arterial_spectral_cascade.storage import verify_restart_equivalence
+          from arterial_spectral_cascade.paired_runtime import verify_paired_restart_equivalence
+
+          backend = asc.PERFORMANCE_BACKEND_STATUS.active
+          expected = 17 if backend == "optimized" else 16
+          report = asc.full_verification_suite()
+          assert report["pass"], report
+          assert len(report["tests"]) == expected, (backend, len(report["tests"]), expected)
+          assert verify_restart_equivalence()["pass"]
+          assert verify_paired_restart_equivalence()["pass"]
+          print(f"{backend}: {expected}/{expected} verification checks PASS")
+          print("single and paired restart equivalence: PASS")
+          PY
+      - name: Run researcher quick-start
+        run: python examples/researcher_quickstart.py
+
+  notebook-preflight:
+    name: Clean notebook same-kernel preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install notebook runtime dependencies only
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'setuptools>=68' wheel -r requirements.txt nbformat
+      - name: Execute install and import cells in one kernel
+        run: |
+          python - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          import nbformat
+
+          assert importlib.util.find_spec("arterial_spectral_cascade") is None
+          nb = nbformat.read(Path("notebooks/Full_Study.ipynb"), as_version=4)
+          nbformat.validate(nb)
+          cells = {c.get("id"): c for c in nb.cells}
+          ns = {"__name__": "__main__"}
+          exec(compile(cells["8719de88"].source, "<notebook-install-cell>", "exec"), ns, ns)
+          import arterial_spectral_cascade as asc
+          assert asc.__version__ == "0.4.1"
+          assert str(Path(asc.__file__).resolve()).startswith(str((Path.cwd() / "src").resolve()))
+          exec(compile(cells["ac0f1f19"].source, "<notebook-import-cell>", "exec"), ns, ns)
+          print("notebook same-kernel preflight: PASS")
+          PY
+
+  release-build:
+    name: Build and install release artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Build wheel and source distribution
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install '.[release]'
+          python -m build
+          python -m twine check dist/*
+      - name: Install wheel into a clean environment
+        run: |
+          python -m venv /tmp/asc-release
+          /tmp/asc-release/bin/python -m pip install --upgrade pip
+          /tmp/asc-release/bin/python -m pip install dist/*.whl
+          cd /tmp
+          /tmp/asc-release/bin/python - <<'PY'
+          import arterial_spectral_cascade as asc
+          from arterial_spectral_cascade.verification import quick_numerical_check
+
+          assert asc.__version__ == "0.4.1"
+          report = quick_numerical_check()
+          assert report["pass"], report
+          print("wheel import and quick numerical check: PASS")
+          PY

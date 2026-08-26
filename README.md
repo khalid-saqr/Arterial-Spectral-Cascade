@@ -1,6 +1,8 @@
 # Arterial spectral-cascade computational study
 
-This repository implements the spatially heterogeneous extension of the fractional-KdV model introduced in the 2026 *Physics of Fluids* article **“Resonant spectral cascade in Womersley flow triggered by arterial geometry.”**
+[![Research software CI](https://github.com/khalid-saqr/Arterial-Spectral-Cascade/actions/workflows/ci.yml/badge.svg)](https://github.com/khalid-saqr/Arterial-Spectral-Cascade/actions/workflows/ci.yml)
+
+This repository implements the spatially heterogeneous extension of the fractional-KdV model introduced in the 2026 *Physics of Fluids* article **“Resonant spectral cascade in Womersley flow triggered by arterial geometry”** (DOI: `10.1063/5.0319995`).
 
 The authoritative sources for the present package are:
 
@@ -92,13 +94,34 @@ The independent verification suite includes Fourier-sign and three-form identiti
 
 ## Verified Colab performance backend
 
-Version 0.4 adds a CPU-oriented performance layer intended for Google Colab Free-tier execution without changing the Mathematical Model, the two-thirds projector, floating-point precision, ETDRK4 coefficients, convergence tolerances, or acceptance criteria. The default `optimized` backend is installed only after an automatic deterministic comparison with the preserved reference implementation. The check compares the heterogeneous residual, one ETDRK4 step, and a short trajectory in double precision; if the comparison fails, the package retains the reference backend. Set `ASC_BACKEND=reference` before importing the package to force the reference implementation.
+The CPU-oriented performance layer is intended for Google Colab Free-tier execution without changing the Mathematical Model, the two-thirds projector, floating-point precision, ETDRK4 coefficients, convergence tolerances, or acceptance criteria. The default `optimized` backend is installed only after an automatic deterministic comparison with the preserved reference implementation. The check compares the heterogeneous residual, one ETDRK4 step, and a short trajectory in double precision; if the comparison fails, the package retains the reference backend. Set `ASC_BACKEND=reference` before importing the package to force the reference implementation.
 
 The optimized backend packs the two real heterogeneous derivative reconstructions into one complex inverse FFT, caches coefficient-only fields used by the exact balance diagnostics, reuses the physical reconstruction used by the explicit-scale diagnostic, and writes frequent checkpoint archives transactionally without compression while leaving final scientific result archives compressed. `PERFORMANCE_BACKEND_STATUS` records which backend is active and the equivalence errors; the same evidence is written into case metadata. The full verification suite includes the optimized/reference equivalence check.
 
-Parameter selection remains morphology-class specific. Main DL/DM/DR calculations now use the accepted `(N, dt)` for their own morphology class rather than automatically inheriting the globally most expensive resolution. Explicit `N` or `dt` supplied for verification or convergence calculations always overrides this behavior. Conservative global settings are retained only as fallbacks for non-disease code paths. This reduces work only where convergence has already established that the coarser setting is scientifically sufficient.
+Parameter selection remains morphology-class specific. Main DL/DM/DR calculations use the accepted `(N, dt)` for their own morphology class rather than automatically inheriting the globally most expensive resolution. Explicit `N` or `dt` supplied for verification or convergence calculations always overrides this behavior. Conservative global settings are retained only as fallbacks for non-disease code paths. This reduces work only where convergence has already established that the coarser setting is scientifically sufficient.
 
 `benchmark_performance_backend(prep, steps=...)` provides an informational reference/optimized timing comparison for the current CPU. Timing is never an acceptance criterion.
+
+## Researcher quick start
+
+Clone the repository and install the package in an isolated Python environment:
+
+```bash
+git clone https://github.com/khalid-saqr/Arterial-Spectral-Cascade.git
+cd Arterial-Spectral-Cascade
+python -m pip install -e .
+python examples/quick_check.py
+```
+
+A minimal heterogeneous/matched-mean calculation is provided in:
+
+```bash
+python examples/researcher_quickstart.py
+```
+
+The example uses deliberately **synthetic coefficient-space values** for $\chi_b$ and $\chi_g$. They demonstrate the software interface only and are not clinical disease mappings.
+
+For a complete study, use `notebooks/Full_Study.ipynb` and provide explicit admissible disease cases before `FULL_STUDY` is executed.
 
 ## Geometry-derived morphology input
 
@@ -139,12 +162,22 @@ The public interface uses:
 
 `FULL_STUDY` remains the default mode, but it will refuse to start without explicit configured disease cases.
 
-## Local installation and tests
+## Verification and release checks
+
+For local development:
 
 ```bash
-python -m pip install -e .[test]
-pytest -q
+python -m pip install -e '.[test]'
+python -m pytest -q
 ```
+
+Permanent GitHub Actions CI checks supported Python versions, optimized and reference scientific verification, single/paired restart equivalence, notebook same-kernel installation, and clean wheel/sdist build and installation.
+
+## Citation
+
+The repository includes `CITATION.cff`. If this software is used in research, cite the software release and the associated article:
+
+K. M. Saqr, “Resonant spectral cascade in Womersley flow triggered by arterial geometry,” *Physics of Fluids* **38**, 041901 (2026), DOI `10.1063/5.0319995`.
 
 ## Scope
 

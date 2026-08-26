@@ -4,11 +4,30 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "arterial-spectral-cascade"
-version = "0.4.0"
+version = "0.4.1"
 description = "Disease-resolved heterogeneous fractional-KdV solver for arterial spectral resonance and cascade studies"
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{name = "Research software accompanying the 2026 Physics of Fluids study extension"}]
+authors = [{name = "Khalid M. Saqr"}]
+keywords = [
+  "arterial flow",
+  "fractional KdV",
+  "Womersley flow",
+  "spectral methods",
+  "ETDRK4",
+  "hemodynamics"
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: OS Independent"
+]
 dependencies = [
   "numpy>=1.24",
   "scipy>=1.10",
@@ -19,6 +38,13 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=7.4", "nbformat>=5.9"]
+release = ["build>=1.2", "twine>=5.1"]
+
+[project.urls]
+Homepage = "https://github.com/khalid-saqr/Arterial-Spectral-Cascade"
+Repository = "https://github.com/khalid-saqr/Arterial-Spectral-Cascade"
+Issues = "https://github.com/khalid-saqr/Arterial-Spectral-Cascade/issues"
+"Associated publication" = "https://doi.org/10.1063/5.0319995"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

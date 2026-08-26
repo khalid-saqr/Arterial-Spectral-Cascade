@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite both the software release and the associated Physics of Fluids article."
+title: "Arterial Spectral Cascade"
+type: software
+authors:
+  - family-names: "Saqr"
+    given-names: "Khalid M."
+version: 0.4.1
+date-released: 2026-08-26
+repository-code: "https://github.com/khalid-saqr/Arterial-Spectral-Cascade"
+url: "https://github.com/khalid-saqr/Arterial-Spectral-Cascade"
+keywords:
+  - arterial flow
+  - fractional KdV
+  - Womersley flow
+  - spectral methods
+  - ETDRK4
+  - hemodynamics
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Saqr"
+      given-names: "Khalid M."
+  title: "Resonant spectral cascade in Womersley flow triggered by arterial geometry"
+  journal: "Physics of Fluids"
+  volume: 38
+  year: 2026
+  doi: "10.1063/5.0319995"

@@ -37,6 +37,16 @@ def test_permission_required_license_is_shipped_and_documented():
     assert "prior written permission" in citation.lower()
 
 
+def test_readme_math_uses_github_safe_dollar_delimiters():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    for forbidden in (r"\(", r"\)", r"\[", r"\]"):
+        assert forbidden not in readme
+    # Bare multiline $$ delimiter lines can collide with ordinary Markdown
+    # parsing (notably Setext-heading syntax when an equation contains '=')
+    # before GitHub's math renderer sees the expression.
+    assert re.search(r"(?m)^\s*\$\$\s*$", readme) is None
+
+
 def test_internal_build_markdown_is_not_shipped_at_repository_root():
     for name in ("PACKAGE_AUDIT.md", "PLOTTING_STANDARD.md", "TERMINOLOGY_AND_NAMING.md"):
         assert not (ROOT / name).exists()

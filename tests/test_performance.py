@@ -31,7 +31,7 @@ def test_class_specific_converged_settings_are_used_when_unspecified():
     assert explicit.dt==1e-3
 
 
-def test_checkpoint_is_transactional_uncompressed_npz(tmp_path):
+def test_checkpoint_format_matches_active_backend(tmp_path):
     spec=CaseSpec("P1",Wo0=5,N=32,dt=.002,T_final=.02,k0=.5,eps_b=.05,eps_g=.04,q=1.0,
                   output_every_steps=2,checkpoint_every_steps=5)
     prep=prepare_case(spec)
@@ -40,6 +40,8 @@ def test_checkpoint_is_transactional_uncompressed_npz(tmp_path):
     history={}; rec=_record(prep,ah,0); _history_append(history,rec)
     peak={"R":rec["R"],"step":0,"ahat":ah.copy()}
     path=save_checkpoint(prep,paths,0,ah,history,peak)
+    expected=(zipfile.ZIP_STORED if asc.PERFORMANCE_BACKEND_STATUS.active=="optimized"
+              else zipfile.ZIP_DEFLATED)
     with zipfile.ZipFile(path,"r") as z:
         assert z.infolist()
-        assert all(info.compress_type==zipfile.ZIP_STORED for info in z.infolist())
+        assert all(info.compress_type==expected for info in z.infolist())

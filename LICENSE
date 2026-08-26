@@ -1,0 +1,104 @@
+Arterial Spectral Cascade — Permission-Required Software License
+Version 1.0
+
+Copyright (c) 2026 Khalid M. Saqr. All rights reserved.
+
+1. NO GENERAL LICENSE GRANTED
+
+This software, including its source code, documentation, examples, notebooks,
+tests, data structures, numerical methods as implemented, and all associated
+files (collectively, the "Software"), is made publicly viewable for
+transparency, scholarly inspection, citation, and permission-request purposes.
+
+Except for rights that cannot lawfully be restricted and rights necessarily
+granted by the hosting platform solely for operation of that platform, no
+license or permission is granted by public availability of the Software.
+
+2. PRIOR WRITTEN PERMISSION REQUIRED
+
+You must obtain prior written permission from the copyright holder before you
+use the Software.
+
+Without such prior written permission, you may not, in whole or in part:
+
+(a) run, execute, compile, install, or otherwise operate the Software;
+(b) use the Software for research, education, teaching, validation,
+    benchmarking, engineering, clinical, commercial, governmental, or any
+    other purpose;
+(c) copy or reproduce the Software except as unavoidably required for ordinary
+    viewing through the hosting platform;
+(d) modify, adapt, translate, port, extend, or create derivative works from
+    the Software;
+(e) distribute, publish, transmit, share, sublicense, sell, rent, lease, host,
+    provide as a service, or otherwise make the Software or a derivative work
+    available to another person or organization;
+(f) incorporate the Software, in whole or in part, into another software
+    package, computational workflow, model, product, service, publication
+    supplement, or research infrastructure; or
+(g) authorize or assist another person or organization to do any of the above.
+
+3. REQUESTING PERMISSION
+
+Permission requests must be sent to:
+
+Khalid M. Saqr
+khalid.saqr@knowdyn.co.uk
+
+A permission is valid only if granted in writing by the copyright holder.
+Permission may be limited by purpose, user, institution, project, duration,
+publication, redistribution, commercial status, or other stated conditions.
+
+4. CITATION IS NOT PERMISSION
+
+Citation, attribution, acknowledgement, reference to the associated
+publication, or inclusion of CITATION.cff metadata does not grant permission
+to use the Software and does not replace the written permission required by
+this License.
+
+5. NO IMPLIED RIGHTS
+
+No patent, trademark, trade-secret, database, commercial-use, redistribution,
+sublicensing, or other intellectual-property right is granted by implication,
+estoppel, publication, repository access, citation, or otherwise.
+
+6. AUTHORIZED USE
+
+If written permission is granted, your use is governed by both this License and
+the written permission. If the written permission conflicts with this License,
+the written permission controls only to the extent expressly stated by the
+copyright holder.
+
+Unless the written permission expressly allows otherwise, you must preserve
+all copyright, attribution, citation, and license notices in every authorized
+copy or derivative work.
+
+7. TERMINATION
+
+Any permission granted under this License terminates automatically if you
+breach this License or the applicable written permission. Upon termination,
+you must stop the unauthorized activity and, to the extent legally permitted
+and technically practicable, cease use and remove unauthorized copies and
+derivative works in your possession or control.
+
+8. DISCLAIMER OF WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, ACCURACY, NON-INFRINGEMENT, OR RESULTS. THE
+COPYRIGHT HOLDER DOES NOT WARRANT THAT THE SOFTWARE IS ERROR-FREE, SUITABLE
+FOR CLINICAL OR ENGINEERING DECISION-MAKING, OR APPROPRIATE FOR ANY PARTICULAR
+RESEARCH QUESTION.
+
+9. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE COPYRIGHT HOLDER SHALL
+NOT BE LIABLE FOR ANY CLAIM, DAMAGES, LOSS, COST, OR OTHER LIABILITY ARISING
+FROM ACCESS TO, INABILITY TO USE, AUTHORIZED OR UNAUTHORIZED USE OF, OR
+RELIANCE ON THE SOFTWARE.
+
+10. RESERVATION OF RIGHTS
+
+All rights not expressly granted in a written permission from the copyright
+holder are reserved.
+
+For permission: khalid.saqr@knowdyn.co.uk

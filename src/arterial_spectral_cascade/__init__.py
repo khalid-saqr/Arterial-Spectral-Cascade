@@ -38,7 +38,7 @@ _performance.PERFORMANCE_BACKEND_STATUS = PERFORMANCE_BACKEND_STATUS
 # optimized/reference equivalence check when the optimized backend is active.
 from .parent import full_verification_suite as full_verification_suite
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 __all__ = [
     "MODEL_SCHEMA","SOLVER_SCHEMA","RESULT_SCHEMA","PARENT_REFERENCE_SCHEMA",

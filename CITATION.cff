@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite both the software release and the associated Physics of Fluids article."
+message: "Prior written permission is required before use. If authorized use contributes to research, cite both the software release and the associated Physics of Fluids article."
 title: "Arterial Spectral Cascade"
 type: software
 authors:

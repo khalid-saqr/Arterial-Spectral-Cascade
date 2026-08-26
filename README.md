@@ -56,71 +56,71 @@ The package does **not** add or infer:
 - patient-specific boundary conditions;
 - direct clinical-outcome prediction.
 
-Anatomical information can enter only through an admissible normalized morphology field \(\Psi_D\) and externally justified or parametrically varied signed sensitivities \(\chi_b,\chi_g\).
+Anatomical information can enter only through an admissible normalized morphology field $\Psi_D$ and externally justified or parametrically varied signed sensitivities $\chi_b,\chi_g$.
 
 ## Mathematical model
 
 The governing equation is
 
-\[
+$$
 a_s+a\,a_\xi+b(\xi)\,a_{\xi\xi\xi}+g(\xi)\Lambda a=0,
 \qquad
 \Lambda=(-\partial_\xi^2)^{1/2},
-\]
+$$
 
 on the periodic domain
 
-\[
+$$
 \xi\in[0,L_g],\qquad L_g=4\pi.
-\]
+$$
 
 The Riesz operator is positive and first order:
 
-\[
+$$
 \widehat{\Lambda f}(k)=|k|\widehat f(k).
-\]
+$$
 
 The Womersley-dependent baseline coefficients are inherited from the published model:
 
-\[
+$$
 b_0(\mathrm{Wo})=b_{\mathrm{ref}}\mathrm{Wo}^{-2},
-\]
+$$
 
-\[
+$$
 g_0(\mathrm{Wo})
 =g_{\mathrm{ref}}\left(1+\frac{C_g}{\mathrm{Wo}}\right),
 \qquad
 g_{\mathrm{ref}}=0.005,
 \qquad
 C_g=0.1.
-\]
+$$
 
 The full coefficient fields are
 
-\[
+$$
 b(\xi)
 =b_0(\mathrm{Wo})
 \left[1+\varepsilon_b\cos(q\xi)+\chi_b\Psi_D(\xi)\right],
-\]
+$$
 
-\[
+$$
 g(\xi)
 =g_0(\mathrm{Wo})
 \left[1+\varepsilon_g\cos(q\xi)+\chi_g\Psi_D(\xi)\right].
-\]
+$$
 
 Here:
 
-- \(\Psi_D\) is a smooth periodic morphology field satisfying \(0\leq\Psi_D\leq1\);
-- \(\chi_b\) is the signed effective sensitivity of dispersion to the morphology field;
-- \(\chi_g\) is the signed effective sensitivity of fractional damping to the morphology field;
-- \(\varepsilon_b,\varepsilon_g,q\) describe the parent sinusoidal coefficient modulation.
+- $\Psi_D$ is a smooth periodic morphology field satisfying $0\leq\Psi_D\leq1$;
+- $\chi_b$ is the signed effective sensitivity of dispersion to the morphology field;
+- $\chi_g$ is the signed effective sensitivity of fractional damping to the morphology field;
+- $\varepsilon_b,\varepsilon_g,q$ describe the parent sinusoidal coefficient modulation.
 
 For the primary disease-only study,
 
-\[
+$$
 \varepsilon_b=\varepsilon_g=0,
-\]
+$$
 
 so that the disease morphology is the only source of coefficient heterogeneity. A combined disease-plus-parent-background case is permitted only when it is identified explicitly in the study record.
 
@@ -128,26 +128,26 @@ so that the disease morphology is the only source of coefficient heterogeneity. 
 
 The inherited multi-harmonic form is
 
-\[
+$$
 a(\xi,0)
 =\sum_{n=1}^{3}A_n\sin(nk_0\xi+\phi_n),
-\]
+$$
 
 with
 
-\[
+$$
 A_2/A_1=0.3,\qquad A_3/A_1=0.1.
-\]
+$$
 
-`CaseSpec` exposes \(A_1\), the amplitude ratios, phases, and \(k_0\). The implementation defaults are intended as reproducible package defaults; researchers should use values justified by the study they are reproducing or extending. The published detailed and Womersley-sweep calculations used \(k_0=0.5\) and \(k_0=1.0\), respectively, as recovery references.
+`CaseSpec` exposes $A_1$, the amplitude ratios, phases, and $k_0$. The implementation defaults are intended as reproducible package defaults; researchers should use values justified by the study they are reproducing or extending. The published detailed and Womersley-sweep calculations used $k_0=0.5$ and $k_0=1.0$, respectively, as recovery references.
 
 ## Disease morphology input
 
-The package provides three disease morphology classes. They are alternative choices for the same \(\Psi_D\); they are not different governing equations.
+The package provides three disease morphology classes. They are alternative choices for the same $\Psi_D$; they are not different governing equations.
 
 ### `DL`: single localized morphology
 
-\[
+$$
 \Psi_L(\xi;\xi_c,w,p)
 =
 \exp\left\{
@@ -158,7 +158,7 @@ The package provides three disease morphology classes. They are alternative choi
 \right\},
 \qquad
 w>0,\quad p\in\mathbb N,\ p\ge1.
-\]
+$$
 
 - `xi_c` controls lesion location;
 - `w` controls local axial extent;
@@ -166,34 +166,34 @@ w>0,\quad p\in\mathbb N,\ p\ge1.
 
 ### `DM`: normalized multiple-lesion morphology
 
-For lesions with amplitudes \(A_j\), locations \(\xi_j\), widths \(w_j\), and smoothness exponents \(p_j\),
+For lesions with amplitudes $A_j$, locations $\xi_j$, widths $w_j$, and smoothness exponents $p_j$,
 
-\[
+$$
 \Psi_M(\xi)
 =
 \frac{1}{M}
 \sum_{j=1}^{N_D}A_j\Psi_{L,j}(\xi),
-\]
+$$
 
-where \(M\) is the maximum of the unnormalized sum, giving \(0\leq\Psi_M\leq1\).
+where $M$ is the maximum of the unnormalized sum, giving $0\leq\Psi_M\leq1$.
 
 ### `DR`: distributed irregular or geometry-derived morphology
 
 An analytical distributed morphology begins with
 
-\[
+$$
 r_D(\xi)=\sum_{j=1}^{J}A_j\cos(q_j\xi+\varphi_j)
-\]
+$$
 
 and is normalized as
 
-\[
+$$
 \Psi_R(\xi)
 =
 \frac{r_D(\xi)-r_{\min}}{r_{\max}-r_{\min}}.
-\]
+$$
 
-A `DR` case may instead use a sampled geometry-derived \(\Psi_D\). The sampled field must be supplied on the solver collocation grid, normalized consistently with \(0\leq\Psi_D\leq1\), sufficiently smooth and periodic at the resolved scale, and accompanied by morphology provenance and a declared characteristic morphology scale.
+A `DR` case may instead use a sampled geometry-derived $\Psi_D$. The sampled field must be supplied on the solver collocation grid, normalized consistently with $0\leq\Psi_D\leq1$, sufficiently smooth and periodic at the resolved scale, and accompanied by morphology provenance and a declared characteristic morphology scale.
 
 The package performs **no hidden interpolation** and constructs **no local Womersley field** from geometry.
 
@@ -201,46 +201,46 @@ The package performs **no hidden interpolation** and constructs **no local Womer
 
 | Class | Coefficients / morphology | Purpose |
 | --- | --- | --- |
-| `H0` | Constant \(b_0,g_0\), no disease morphology | Homogeneous baseline and exact checks |
+| `H0` | Constant $b_0,g_0$, no disease morphology | Homogeneous baseline and exact checks |
 | `P0` | Spatial means only | Recovery of the published constant-coefficient numerical model |
-| `P1` | Parent sinusoidal \(b(\xi),g(\xi)\), \(\Psi_D=0\) | Pointwise parent coefficient effect omitted by averaging |
-| `DL` | Single localized \(\Psi_L\) | Localized disease heterogeneity |
-| `DM` | Normalized multiple-lesion \(\Psi_M\) | Multiple localized disease heterogeneity |
-| `DR` | Distributed \(\Psi_R\) or sampled \(\Psi_D\) | Distributed or geometry-derived heterogeneity |
-| `MM` | Constant exact \(\bar b,\bar g\) of a paired heterogeneous case | Isolate spatial arrangement from mean renormalization |
+| `P1` | Parent sinusoidal $b(\xi),g(\xi)$, $\Psi_D=0$ | Pointwise parent coefficient effect omitted by averaging |
+| `DL` | Single localized $\Psi_L$ | Localized disease heterogeneity |
+| `DM` | Normalized multiple-lesion $\Psi_M$ | Multiple localized disease heterogeneity |
+| `DR` | Distributed $\Psi_R$ or sampled $\Psi_D$ | Distributed or geometry-derived heterogeneity |
+| `MM` | Constant exact $\bar b,\bar g$ of a paired heterogeneous case | Isolate spatial arrangement from mean renormalization |
 
 For any heterogeneous case,
 
-\[
+$$
 b=\bar b+\widetilde b,\qquad
 g=\bar g+\widetilde g.
-\]
+$$
 
 For a parent sinusoid compatible with the periodic domain,
 
-\[
+$$
 \bar b=b_0(1+\chi_b\overline{\Psi}_D),
 \qquad
 \bar g=g_0(1+\chi_g\overline{\Psi}_D).
-\]
+$$
 
 The heterogeneous equation can therefore be written exactly as
 
-\[
+$$
 a_s+a a_\xi+\bar b a_{\xi\xi\xi}+\bar g\Lambda a
 =
 -\widetilde b\,a_{\xi\xi\xi}
 -\widetilde g\,\Lambda a.
-\]
+$$
 
 The matched-mean control evolves
 
-\[
+$$
 a_s^{(m)}
 +a^{(m)}a_\xi^{(m)}
 +\bar b\,a_{\xi\xi\xi}^{(m)}
 +\bar g\,\Lambda a^{(m)}=0
-\]
+$$
 
 with the **same initial condition, grid, timestep, output cadence, and final time**.
 
@@ -257,22 +257,22 @@ A disease case is not accepted merely because its numerical parameters can be co
 
 1. **Smooth periodic morphology and coefficients.**
 2. **Positive effective coefficients:**
-   \[
+   $$
    \inf_\xi b(\xi)>0,\qquad \inf_\xi g(\xi)>0.
-   \]
+   $$
 3. **Weak-to-moderate heterogeneity:**
-   \[
+   $$
    \max\left(
    \frac{\|b-\bar b\|_\infty}{\bar b},
    \frac{\|g-\bar g\|_\infty}{\bar g}
    \right)\le0.3.
-   \]
-4. **Long-wave consistency.** For a localized morphology scale \(\ell_D\),
-   \[
+   $$
+4. **Long-wave consistency.** For a localized morphology scale $\ell_D$,
+   $$
    R_0/\ell_D\ll1.
-   \]
+   $$
    The package requires explicit reduced-order consistency inputs and operationalizes this asymptotic requirement with a declared `slow_variation_limit`.
-5. **Resolved morphology and coefficient fields.** The two-thirds projection errors for \(\Psi_D\), \(b\), and \(g\) must remain below configured limits.
+5. **Resolved morphology and coefficient fields.** The two-thirds projection errors for $\Psi_D$, $b$, and $g$ must remain below configured limits.
 
 The default study configuration uses:
 
@@ -300,72 +300,72 @@ Model admissibility and numerical validity are recorded separately.
 
 The continuum convention is
 
-\[
+$$
 f(\xi)=\sum_{\ell\in\mathbb Z}\widehat f_\ell e^{-ik_\ell\xi},
 \qquad
 k_\ell=\frac{2\pi\ell}{L_g},
-\]
+$$
 
 so that
 
-\[
+$$
 \partial_\xi\mapsto-ik,\qquad
 \partial_\xi^3\mapsto ik^3,\qquad
 \Lambda\mapsto|k|.
-\]
+$$
 
 NumPy's FFT ordering is reconciled with this convention by using the signed code wavenumber
 
-\[
+$$
 k_m=-\frac{2\pi}{L_g}\nu_m.
-\]
+$$
 
 ### Exact mean-heterogeneity split
 
 The diagonal mean operator is
 
-\[
+$$
 L_0(k)=-i\bar b k^3-\bar g|k|.
-\]
+$$
 
 The residual is
 
-\[
+$$
 \mathcal F(a)
 =
 -\frac12\partial_\xi(a^2)
 -\widetilde b\,a_{\xi\xi\xi}
 -\widetilde g\,\Lambda a.
-\]
+$$
 
 This split is exact. No dense heterogeneous matrix exponential is used in production calculations.
 
 The operator ordering is fixed:
 
-- \(b(\xi)a_{\xi\xi\xi}\), not \(\partial_\xi^3[ba]\);
-- \(g(\xi)\Lambda a\), not \(\Lambda[ga]\).
+- $b(\xi)a_{\xi\xi\xi}$, not $\partial_\xi^3[ba]$;
+- $g(\xi)\Lambda a$, not $\Lambda[ga]$.
 
 ### Two-thirds projection
 
-With \(N\) even, the package retains modes satisfying
+With $N$ even, the package retains modes satisfying
 
-\[
+$$
 |\nu_m|\le\lfloor N/3\rfloor
-\]
+$$
 
 and sets the remaining modes to zero. The state and coefficient spectra are projected before multiplicative evaluation, and transformed products are projected before return to the time integrator.
 
-The zero Fourier mode is retained and is **not reset**. Heterogeneous coefficient fields can generate a nonzero mean through the exact \(I_1\) balance.
+The zero Fourier mode is retained and is **not reset**. Heterogeneous coefficient fields can generate a nonzero mean through the exact $I_1$ balance.
 
 ### ETDRK4
 
-The mean operator is advanced analytically with fourth-order exponential time differencing Runge-Kutta (ETDRK4). The implementation uses cancellation-safe \(\varphi\)-functions and their analytic zero-mode limits,
+The mean operator is advanced analytically with fourth-order exponential time differencing Runge-Kutta (ETDRK4). The implementation uses cancellation-safe $\varphi$-functions and their analytic zero-mode limits,
 
-\[
+$$
 \varphi_1(0)=1,\qquad
 \varphi_2(0)=\frac12,\qquad
 \varphi_3(0)=\frac16.
-\]
+$$
 
 Every ETDRK4 intermediate state and final state is projected.
 
@@ -373,7 +373,7 @@ Every ETDRK4 intermediate state and final state is projected.
 
 The explicitly treated nonlinear/heterogeneous scale is monitored with
 
-\[
+$$
 \chi_h
 =
 h\left[
@@ -381,7 +381,7 @@ h\left[
 +\|\widetilde b\|_\infty k_{\mathrm{ret}}^3
 +\|\widetilde g\|_\infty k_{\mathrm{ret}}
 \right].
-\]
+$$
 
 `chi_h` is a screening diagnostic, not a stability theorem. Timestep acceptance is determined by refinement.
 
@@ -391,82 +391,82 @@ h\left[
 
 The package records
 
-\[
+$$
 I_1(s)=\int_0^{L_g}a\,d\xi,
 \qquad
 I_2(s)=\int_0^{L_g}a^2\,d\xi,
 \qquad
 E=\frac12 I_2.
-\]
+$$
 
 For the heterogeneous system,
 
-\[
+$$
 \frac{dI_1}{ds}
 =
 \int a\,b'''(\xi)\,d\xi
 -
 \int a\,\Lambda g(\xi)\,d\xi,
-\]
+$$
 
 and
 
-\[
+$$
 \frac{dE}{ds}
 =
 \frac12\int b'''a^2\,d\xi
 -\frac32\int b'(a_\xi)^2\,d\xi
 -\int g\,a\,\Lambda a\,d\xi.
-\]
+$$
 
 Instantaneous and integrated balance residuals are stored and used in numerical acceptance.
 
 ### Logarithmic wave-energy growth
 
-\[
+$$
 G(s)=\frac{d}{ds}\ln I_2(s),
 \qquad
 G_{\mathrm{bal}}=\frac{2\mathcal B_E}{I_2}.
-\]
+$$
 
-An independent finite-difference estimate is generated from the saved \(I_2\) history. A negative \(G\) is **not** imposed as a universal validity condition for heterogeneous cases.
+An independent finite-difference estimate is generated from the saved $I_2$ history. A negative $G$ is **not** imposed as a universal validity condition for heterogeneous cases.
 
 ### Spectral broadening
 
 The inherited cutoff is
 
-\[
+$$
 k_c=1.5(3k_0).
-\]
+$$
 
 Using normalized Fourier coefficients,
 
-\[
+$$
 R(s)=\frac{E_{\mathrm{high}}}{E_{\mathrm{low}}},
-\]
+$$
 
 where the low band includes the zero mode and the high band extends to the retained two-thirds cutoff.
 
-The historical \(R>1.5\) criterion is retained only as a parent-reference diagnostic. Heterogeneous disease conclusions should be based primarily on converged heterogeneous-versus-matched-mean comparisons.
+The historical $R>1.5$ criterion is retained only as a parent-reference diagnostic. Heterogeneous disease conclusions should be based primarily on converged heterogeneous-versus-matched-mean comparisons.
 
 ### Matched-mean observables
 
 For every paired heterogeneous calculation,
 
-\[
+$$
 \Delta R(s)=R_{\mathrm{het}}(s)-R_{\mathrm{mm}}(s),
-\]
+$$
 
-\[
+$$
 D_2(s)
 =
 \frac{\|a_{\mathrm{het}}-a_{\mathrm{mm}}\|_{L^2}}
 {\max(\|a_{\mathrm{mm}}\|_{L^2},\epsilon_{\mathrm{mach}})}.
-\]
+$$
 
 ### Tail-resolution diagnostic
 
-\[
+$$
 \eta_{\mathrm{tail}}
 =
 \frac{
@@ -475,7 +475,7 @@ D_2(s)
 }{
 \sum_{|k|\le k_{\mathrm{ret}}}|\widehat a_k|^2
 }.
-\]
+$$
 
 Persistent accumulation near the retained cutoff or material change under refinement indicates inadequate spatial resolution.
 
@@ -483,7 +483,7 @@ Persistent accumulation near the retained cutoff or material change under refine
 
 For selected mechanism cases,
 
-\[
+$$
 \frac{dE_k}{ds}
 =
 T_N(k)
@@ -491,13 +491,13 @@ T_N(k)
 +T_{\widetilde g}(k)
 +T_{\bar g}(k)
 +T_{\bar b}(k).
-\]
+$$
 
-The decomposition is checked for modal and high-band closure. The mean dispersive contribution \(T_{\bar b}\) must vanish to numerical roundoff because it is purely phase rotating.
+The decomposition is checked for modal and high-band closure. The mean dispersive contribution $T_{\bar b}$ must vanish to numerical roundoff because it is purely phase rotating.
 
 ## Verification and numerical acceptance
 
-A full scientific study should not begin from an arbitrary \(N\) and timestep. The package separates:
+A full scientific study should not begin from an arbitrary $N$ and timestep. The package separates:
 
 1. **analytical/numerical verification of the solver**, and
 2. **parameter selection for the configured morphology classes**.
@@ -529,24 +529,24 @@ The permanent GitHub Actions workflow runs the Python test suite across supporte
 
 For each configured morphology class, a demanding admissible coefficient-sensitivity case is refined in space. At common saved times,
 
-\[
+$$
 \epsilon_{I_2}^{(N)}
 =
 \frac{\max_s|I_2^{(2N)}-I_2^{(N)}|}
 {\max_s I_2^{(2N)}}.
-\]
+$$
 
 The inherited minimum requirement is
 
-\[
+$$
 \epsilon_{I_2}^{(N)}<10^{-5}.
-\]
+$$
 
-Acceptance also requires stability of the full relevant histories and observables, including \(R\), matched-mean quantities, \(R_{\max}\), its occurrence time, projection errors, tail behavior, and integrated balance residuals.
+Acceptance also requires stability of the full relevant histories and observables, including $R$, matched-mean quantities, $R_{\max}$, its occurrence time, projection errors, tail behavior, and integrated balance residuals.
 
 ### Temporal refinement
 
-Temporal refinement is performed **after a converged spatial resolution has been established**. The full histories of \(I_2\), \(R\), \(\Delta R\), \(D_2\), and the balance residuals are compared. The heterogeneous linear benchmark must show fourth-order convergence until another error floor dominates.
+Temporal refinement is performed **after a converged spatial resolution has been established**. The full histories of $I_2$, $R$, $\Delta R$, $D_2$, and the balance residuals are compared. The heterogeneous linear benchmark must show fourth-order convergence until another error floor dominates.
 
 The published timesteps are recovery references, not automatic full-study choices.
 
@@ -562,7 +562,7 @@ I2_CONVERGENCE_TOL         = 1e-5
 OBSERVABLE_CONVERGENCE_TOL = 1e-3
 ```
 
-When parameter selection succeeds, the main disease calculations use the accepted \(N\) and timestep for their own morphology class. Explicit values supplied for verification or convergence calculations always override those class-specific settings.
+When parameter selection succeeds, the main disease calculations use the accepted $N$ and timestep for their own morphology class. Explicit values supplied for verification or convergence calculations always override those class-specific settings.
 
 ## Installation
 
@@ -689,7 +689,7 @@ spec = CaseSpec(
 )
 ```
 
-Every lesion amplitude must be finite and positive; widths must be positive; and `p` must be an integer \(\ge1\). The combined field is normalized automatically.
+Every lesion amplitude must be finite and positive; widths must be positive; and `p` must be an integer $\ge1$. The combined field is normalized automatically.
 
 ### Analytical distributed `DR`
 
@@ -711,11 +711,11 @@ spec = CaseSpec(
 )
 ```
 
-The distributed wavenumbers must be compatible with periodicity on \([0,L_g]\).
+The distributed wavenumbers must be compatible with periodicity on $[0,L_g]$.
 
 ## Geometry-derived morphology
 
-A measured or externally generated geometry may be used only after it has been converted into the Mathematical Model input \(\Psi_D\).
+A measured or externally generated geometry may be used only after it has been converted into the Mathematical Model input $\Psi_D$.
 
 ```python
 import numpy as np
@@ -742,13 +742,13 @@ print(prepared.admissibility)
 Requirements:
 
 - exactly one morphology value per collocation point;
-- \(0\leq\Psi_D\leq1\);
+- $0\leq\Psi_D\leq1$;
 - periodicity and sufficient smoothness at the resolved scale;
 - declared provenance;
 - declared characteristic morphology scale;
 - independently justified or explicitly parametric `chi_b` and `chi_g`.
 
-If the supplied field is too sharp for the current \(N\), `prepare_case` reports an excessive morphology/coefficient projection error rather than silently smoothing or interpolating the input.
+If the supplied field is too sharp for the current $N$, `prepare_case` reports an excessive morphology/coefficient projection error rather than silently smoothing or interpolating the input.
 
 ## Running a complete study
 
@@ -808,7 +808,7 @@ For new research, use the same logical order enforced by the package:
 2. inspect model preflight/admissibility;
 3. run `VERIFICATION`;
 4. run `PARAMETER_SELECTION`;
-5. allow the package to use the accepted class-specific \(N\) and timestep;
+5. allow the package to use the accepted class-specific $N$ and timestep;
 6. run `FULL_STUDY`;
 7. inspect heterogeneous-versus-matched-mean observables and balance/convergence evidence;
 8. regenerate figures from persisted scientific results.
@@ -879,7 +879,7 @@ The optimized backend changes transform/caching/checkpoint implementation detail
 
 The package is designed to test a specific mechanism:
 
-\[
+$$
 \text{morphology}
 \rightarrow
 \Psi_D(\xi)
@@ -889,7 +889,7 @@ The package is designed to test a specific mechanism:
 \text{off-diagonal spectral coupling}
 \rightarrow
 \text{modified cascade dynamics}.
-\]
+$$
 
 Only the first three arrows are imposed by model construction. The final dynamical effect must be established from converged simulations.
 

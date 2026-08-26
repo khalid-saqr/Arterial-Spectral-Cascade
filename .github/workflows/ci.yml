@@ -66,6 +66,8 @@ jobs:
           print(f"{backend}: {expected}/{expected} verification checks PASS")
           print("single and paired restart equivalence: PASS")
           PY
+      - name: Run researcher quick-start
+        run: python examples/researcher_quickstart.py
 
   notebook-preflight:
     name: Clean notebook same-kernel preflight

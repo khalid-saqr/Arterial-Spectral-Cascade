@@ -25,6 +25,18 @@ def test_research_citation_metadata_tracks_published_model():
     assert doi in readme
 
 
+def test_permission_required_license_is_shipped_and_documented():
+    license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    citation = (ROOT / "CITATION.cff").read_text(encoding="utf-8")
+    email = "khalid.saqr@knowdyn.co.uk"
+    assert email in license_text
+    assert email in readme
+    assert "prior written permission" in license_text.lower()
+    assert "prior written permission" in readme.lower()
+    assert "prior written permission" in citation.lower()
+
+
 def test_internal_build_markdown_is_not_shipped_at_repository_root():
     for name in ("PACKAGE_AUDIT.md", "PLOTTING_STANDARD.md", "TERMINOLOGY_AND_NAMING.md"):
         assert not (ROOT / name).exists()
